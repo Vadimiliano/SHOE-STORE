@@ -14,7 +14,7 @@ export default async function ProductPage({ params }: Props) {
 
   if (!product) notFound()
 
-  const sizes = product.sizes.split(',')
+  const sizes = product.sizes.split(',').map((s) => s.trim()).filter(Boolean)
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10 grid md:grid-cols-2 gap-10">

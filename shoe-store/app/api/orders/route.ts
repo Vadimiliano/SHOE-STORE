@@ -19,6 +19,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Корзина пуста' }, { status: 400 })
   }
 
+  // Корзина лежит в localStorage на клиенте, поэтому её легко подделать через devtools —
+  // проверяем количество на сервере, а не доверяем тому, что пришло
+  const hasInvalidQuantity = items.some(
+    (i) => !Number.isInteger(i.quantity) || i.quantity < 1 || i.quantity > 50
+  )
+  if (hasInvalidQuantity) {
+    return NextResponse.json({ error: 'Некорректное количество товара' }, { status: 400 })
+  }
+
   try {
     // Достаём реальные товары и цены из БД — НИКОГДА не доверяем цене, присланной с клиента
     const productIds = items.map((i) => i.productId)
@@ -27,7 +36,15 @@ export async function POST(request: NextRequest) {
     let total = 0
     const orderItemsData = items.map((item) => {
       const product = products.find((p) => p.id === item.productId)
-      if (!product) throw new Error(`Товар не найден`)
+      if (!product) throw new Error('Товар не найден')
+
+      // Проверяем, что выбранный размер реально есть у товара —
+      // тоже защита от подмены данных в корзине на клиенте
+      const availableSizes = product.sizes.split(',').map((s) => s.trim())
+      if (!availableSizes.includes(item.size)) {
+        throw new Error('Недоступный размер')
+      }
+
       total += product.price * item.quantity
       return {
         productId: product.id,

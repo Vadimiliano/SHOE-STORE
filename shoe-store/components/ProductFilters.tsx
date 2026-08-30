@@ -4,9 +4,12 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useState } from 'react'
 
-const BRANDS = ['Nike', 'Adidas', 'New Balance', 'Puma']
+type Props = {
+  availableBrands: string[]
+  availableSizes: string[]
+}
 
-export default function ProductFilters() {
+export default function ProductFilters({ availableBrands, availableSizes }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -16,7 +19,8 @@ export default function ProductFilters() {
   const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') ?? '')
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') ?? '')
 
-  // Общая функция: берём текущие параметры URL, меняем один из них, переходим на новый URL
+  // Общая функция: берём текущие параметры URL, меняем один из них, переходим на новый URL.
+  // При любом изменении фильтров сбрасываем номер страницы, чтобы не остаться на пустой странице №5
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString())
     if (value) {
@@ -24,28 +28,38 @@ export default function ProductFilters() {
     } else {
       params.delete(key) // пустое значение — убираем параметр из URL полностью
     }
+    params.delete('page')
     router.push(`${pathname}?${params.toString()}`)
   }
 
-  function toggleBrand(brand: string) {
-    const current = searchParams.getAll('brand')
+  // Общая функция для чекбоксов-мультивыборов (бренд, размер) — параметр может повторяться в URL
+  function toggleListParam(key: string, value: string) {
+    const current = searchParams.getAll(key)
     const params = new URLSearchParams(searchParams.toString())
-    params.delete('brand')
+    params.delete(key)
 
-    if (current.includes(brand)) {
-      // если бренд уже выбран — убираем его
-      current.filter((b) => b !== brand).forEach((b) => params.append('brand', b))
-    } else {
-      // иначе добавляем к списку выбранных брендов
-      ;[...current, brand].forEach((b) => params.append('brand', b))
-    }
+    const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value]
+    next.forEach((v) => params.append(key, v))
+    params.delete('page')
     router.push(`${pathname}?${params.toString()}`)
+  }
+
+  function resetFilters() {
+    router.push(pathname)
   }
 
   const selectedBrands = searchParams.getAll('brand')
+  const selectedSizes = searchParams.getAll('size')
 
   return (
     <div className="space-y-6 bg-white p-5 rounded-xl border border-gray-100">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-900">Фильтры</h2>
+        <button type="button" onClick={resetFilters} className="text-xs text-gray-400 hover:text-gray-900">
+          Сбросить
+        </button>
+      </div>
+
       {/* Поиск по названию */}
       <div>
         <label className="text-sm font-medium text-gray-700 mb-2 block">Поиск</label>
@@ -60,23 +74,48 @@ export default function ProductFilters() {
         />
       </div>
 
-      {/* Фильтр по бренду */}
-      <div>
-        <label className="text-sm font-medium text-gray-700 mb-2 block">Бренд</label>
-        <div className="space-y-2">
-          {BRANDS.map((brand) => (
-            <label key={brand} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selectedBrands.includes(brand)}
-                onChange={() => toggleBrand(brand)}
-                className="rounded border-gray-300"
-              />
-              {brand}
-            </label>
-          ))}
+      {/* Фильтр по бренду — список берём из реальных товаров в базе */}
+      {availableBrands.length > 0 && (
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">Бренд</label>
+          <div className="space-y-2">
+            {availableBrands.map((brand) => (
+              <label key={brand} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedBrands.includes(brand)}
+                  onChange={() => toggleListParam('brand', brand)}
+                  className="rounded border-gray-300"
+                />
+                {brand}
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Фильтр по размеру */}
+      {availableSizes.length > 0 && (
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">Размер</label>
+          <div className="flex flex-wrap gap-2">
+            {availableSizes.map((size) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => toggleListParam('size', size)}
+                className={`px-2.5 py-1 border rounded-lg text-xs transition ${
+                  selectedSizes.includes(size)
+                    ? 'border-gray-900 bg-gray-900 text-white'
+                    : 'border-gray-300 text-gray-600 hover:border-gray-900'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Диапазон цены */}
       <div>

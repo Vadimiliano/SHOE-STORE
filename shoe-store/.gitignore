@@ -42,4 +42,6 @@ next-env.d.ts
 
 /app/generated/prisma
 
-/app/generated/prisma
+# база данных SQLite — в ней реальные пароли (хэши) пользователей, в git не должна попадать
+/prisma/*.db
+/prisma/*.db-journal

@@ -4,7 +4,7 @@ const JWT_SECRET = process.env.JWT_SECRET!
 
 export type TokenPayload = {
   userId: string
-  role: 'USER' | 'ADMIN'
+  role: string
 }
 
 // Создаёт токен на основе id и роли пользователя, живёт 7 дней
